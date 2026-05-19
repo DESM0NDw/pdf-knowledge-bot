@@ -40,6 +40,7 @@
   let chatEl = $state<HTMLDivElement | null>(null);
   let pdfPage = $state(1);
   let dragOver = $state(false);
+  let uploadError = $state('');
   let draggingId = $state<string | null>(null);
   let mobileTab = $state<'pdf' | 'chat'>('chat');
 
@@ -73,6 +74,12 @@
 
   async function uploadAndIndex(file: File) {
     if (phase === 'indexing') return;
+    uploadError = '';
+
+    if (file.size > 20 * 1024 * 1024) {
+      uploadError = 'Datei zu groß — max. 20 MB erlaubt.';
+      return;
+    }
 
     messages = [];
     pdfPage = 1;
@@ -89,6 +96,13 @@
     const form = new FormData();
     form.append('file', file);
     const res = await fetch('/api/upload', { method: 'POST', body: form });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      uploadError = err.detail ?? 'Upload fehlgeschlagen.';
+      phase = 'idle';
+      activeStep = -1;
+      return;
+    }
     const data = await res.json();
 
     activeDocId = data.doc_id;
@@ -269,6 +283,9 @@
             <input type="file" accept=".pdf" onchange={onFileInput} hidden />
             Eigene PDF auswählen
           </label>
+          {#if uploadError}
+            <p class="upload-error">{uploadError}</p>
+          {/if}
         </div>
 
       {:else if phase === 'indexing'}
@@ -541,6 +558,7 @@
     border-radius: 8px; cursor: pointer; transition: all 0.15s;
   }
   .upload-btn:hover { border-color: #fbbf24; color: #fbbf24; }
+  .upload-error { font-size: 0.75rem; color: #f87171; margin-top: 0.25rem; }
 
   /* Indexing state */
   .indexing-state {

@@ -135,9 +135,14 @@ def index_demo(doc_id: str):
     return {"doc_id": doc_id, "chunks": count, "cached": False}
 
 
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
+
+
 @app.post("/api/upload")
 async def upload_pdf(file: UploadFile = File(...)):
     contents = await file.read()
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Datei zu groß (max. 20 MB)")
     doc_id = "up_" + hashlib.md5(contents).hexdigest()[:12]
     if doc_id in _indexed:
         return {"doc_id": doc_id, "chunks": 0, "name": file.filename, "cached": True}
