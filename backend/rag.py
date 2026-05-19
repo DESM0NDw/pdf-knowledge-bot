@@ -4,10 +4,13 @@ from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
 
-COLLECTION = "handbook"
 VECTOR_SIZE = 768  # nomic-embed-text
 CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
+
+
+def _collection(doc_id: str) -> str:
+    return f"doc_{doc_id}"
 
 
 def get_embedding(text: str, ollama_host: str) -> list[float]:
@@ -31,16 +34,17 @@ def chunk_text(text: str, page: int) -> list[dict]:
     return chunks
 
 
-def index_pdf(pdf_path: str, client: QdrantClient, ollama_host: str) -> int:
+def index_pdf(pdf_path: str, doc_id: str, client: QdrantClient, ollama_host: str) -> int:
+    collection = _collection(doc_id)
     reader = PdfReader(pdf_path)
 
     try:
-        client.delete_collection(COLLECTION)
+        client.delete_collection(collection)
     except Exception:
         pass
 
     client.create_collection(
-        COLLECTION,
+        collection,
         vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
     )
 
@@ -49,21 +53,20 @@ def index_pdf(pdf_path: str, client: QdrantClient, ollama_host: str) -> int:
         text = page.extract_text() or ""
         for chunk in chunk_text(text, page_num):
             vector = get_embedding(chunk["text"], ollama_host)
-            points.append(
-                PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=vector,
-                    payload={"text": chunk["text"], "page": chunk["page"]},
-                )
-            )
+            points.append(PointStruct(
+                id=str(uuid.uuid4()),
+                vector=vector,
+                payload={"text": chunk["text"], "page": chunk["page"]},
+            ))
 
     if points:
-        client.upsert(collection_name=COLLECTION, points=points)
+        client.upsert(collection_name=collection, points=points)
 
     return len(points)
 
 
-def search(question: str, client: QdrantClient, ollama_host: str, top_k: int = 5) -> list[dict]:
+def search(question: str, doc_id: str, client: QdrantClient, ollama_host: str, top_k: int = 5) -> list[dict]:
+    collection = _collection(doc_id)
     vector = get_embedding(question, ollama_host)
-    hits = client.search(collection_name=COLLECTION, query_vector=vector, limit=top_k)
+    hits = client.search(collection_name=collection, query_vector=vector, limit=top_k)
     return [{"text": h.payload["text"], "page": h.payload["page"], "score": h.score} for h in hits]
