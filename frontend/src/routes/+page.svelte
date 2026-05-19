@@ -281,8 +281,14 @@
           <p class="idle-sub">oder Demo-Dokument oben auswählen</p>
           <label class="upload-btn">
             <input type="file" accept=".pdf" onchange={onFileInput} hidden />
-            Eigene PDF auswählen
+            Eigene PDF auswählen · max. 20 MB
           </label>
+          <div class="idle-warn">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+            <span>Keine persönlichen oder vertraulichen Dokumente hochladen.</span>
+          </div>
           {#if uploadError}
             <p class="upload-error">{uploadError}</p>
           {/if}
@@ -559,6 +565,12 @@
   }
   .upload-btn:hover { border-color: #fbbf24; color: #fbbf24; }
   .upload-error { font-size: 0.75rem; color: #f87171; margin-top: 0.25rem; }
+  .idle-warn {
+    display: flex; align-items: flex-start; gap: 0.4rem;
+    background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.2);
+    border-radius: 7px; padding: 0.4rem 0.6rem;
+    font-size: 0.72rem; color: #b8900a; line-height: 1.4;
+  }
 
   /* Indexing state */
   .indexing-state {
