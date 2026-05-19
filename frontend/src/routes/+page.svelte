@@ -1,6 +1,7 @@
 <script lang="ts">
   import '../app.css';
   import { onMount } from 'svelte';
+  import { cn } from '$lib/utils';
 
   type Doc = {
     id: string;
@@ -47,7 +48,6 @@
     input = '';
     loading = true;
     scrollChat();
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -88,33 +88,37 @@
     draggingId = null;
   }
 
-  const INDUSTRY_COLOR: Record<string, string> = {
-    Technologie: 'badge-amber',
-    Gastronomie: 'badge-red',
-    Immobilien: 'badge-blue',
+  const INDUSTRY_CLASSES: Record<string, string> = {
+    Technologie: 'text-primary border-primary/30 bg-primary/10',
+    Gastronomie: 'text-rose-400 border-rose-400/30 bg-rose-400/10',
+    Immobilien:  'text-blue-400 border-blue-400/30 bg-blue-400/10',
   };
 </script>
 
-<div class="wrapper">
+<div class="min-h-screen flex flex-col bg-background">
 
   <!-- Header -->
-  <header>
-    <div class="header-inner">
-      <div class="header-left">
-        <div class="icon">
-          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+  <header class="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
+    <div class="h-13 flex items-center justify-between px-5 max-w-[1400px] mx-auto">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
           </svg>
         </div>
         <div>
-          <h1>PDF Wissens-Bot</h1>
-          <p class="subtitle">Dokument waehlen &rarr; Frage stellen &rarr; Antwort mit Seitenangabe</p>
+          <h1 class="text-sm font-bold text-foreground">PDF Wissens-Bot</h1>
+          <p class="text-xs text-muted-foreground hidden sm:block">Dokument wählen → Frage stellen → Antwort mit Seitenangabe</p>
         </div>
       </div>
-      <div class="header-right">
-        <span class="demo-badge"><span class="pulse"></span>DEMO</span>
-        <a href="https://desmond.autonomika.de" class="back-link" target="_blank">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <div class="flex items-center gap-3">
+        <span class="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-slow"></span>
+          DEMO
+        </span>
+        <a href="https://desmond.autonomika.de" target="_blank"
+           class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
           </svg>
           Portfolio
@@ -124,12 +128,11 @@
   </header>
 
   <!-- Doc selector -->
-  <div class="doc-bar">
-    <span class="doc-bar-label">Demo-Dokumente:</span>
-    <div class="doc-cards">
+  <div class="border-b border-border bg-background px-5 py-2.5 flex items-center gap-3 overflow-x-auto">
+    <span class="text-[11px] text-muted-foreground whitespace-nowrap flex-shrink-0">Demo-Dokumente:</span>
+    <div class="flex gap-2">
       {#each docs as doc}
         <div
-          class="doc-card {activeDoc?.id === doc.id ? 'active' : ''}"
           role="button"
           tabindex="0"
           draggable="true"
@@ -137,37 +140,54 @@
           onkeydown={(e) => e.key === 'Enter' && selectDoc(doc)}
           ondragstart={(e) => onDragStart(e, doc.id)}
           ondragend={() => draggingId = null}
-          title="Klicken oder in den Viewer ziehen"
+          title="Klicken oder in Viewer ziehen"
+          class={cn(
+            'flex items-center gap-2 bg-secondary border rounded-xl px-3 py-2 cursor-grab select-none transition-all whitespace-nowrap',
+            activeDoc?.id === doc.id
+              ? 'border-primary/60 bg-primary/5'
+              : 'border-border hover:border-muted-foreground/50 hover:bg-accent'
+          )}
         >
-          <svg class="doc-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <svg class={cn('w-4 h-4 flex-shrink-0', activeDoc?.id === doc.id ? 'text-primary' : 'text-muted-foreground')}
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
           </svg>
-          <div class="doc-card-info">
-            <span class="doc-name">{doc.name}</span>
-            <span class="doc-desc">{doc.description}</span>
+          <div class="flex flex-col">
+            <span class="text-[13px] font-semibold text-foreground leading-tight">{doc.name}</span>
+            <span class="text-[11px] text-muted-foreground">{doc.description}</span>
           </div>
-          <span class="industry-badge {INDUSTRY_COLOR[doc.industry] ?? 'badge-amber'}">{doc.industry}</span>
+          <span class={cn('text-[11px] font-semibold px-1.5 py-0.5 rounded border', INDUSTRY_CLASSES[doc.industry] ?? INDUSTRY_CLASSES.Technologie)}>
+            {doc.industry}
+          </span>
         </div>
       {/each}
     </div>
   </div>
 
   <!-- Mobile tabs -->
-  <div class="mobile-tabs">
-    <button class="tab {mobileTab === 'pdf' ? 'active' : ''}" onclick={() => mobileTab = 'pdf'}>
-      Dokument ansehen
-    </button>
-    <button class="tab {mobileTab === 'chat' ? 'active' : ''}" onclick={() => mobileTab = 'chat'}>
-      Chat
-    </button>
+  <div class="flex border-b border-border sm:hidden">
+    <button
+      onclick={() => mobileTab = 'pdf'}
+      class={cn('flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+        mobileTab === 'pdf' ? 'text-primary border-primary' : 'text-muted-foreground border-transparent')}
+    >Dokument ansehen</button>
+    <button
+      onclick={() => mobileTab = 'chat'}
+      class={cn('flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+        mobileTab === 'chat' ? 'text-primary border-primary' : 'text-muted-foreground border-transparent')}
+    >Chat</button>
   </div>
 
-  <!-- Main split -->
-  <div class="split">
+  <!-- Split -->
+  <div class="flex-1 grid sm:grid-cols-2 min-h-0 overflow-hidden">
 
-    <!-- PDF Viewer -->
+    <!-- PDF panel -->
     <div
-      class="pdf-panel {mobileTab === 'chat' ? 'mobile-hidden' : ''} {dragOver ? 'drag-over' : ''}"
+      class={cn(
+        'flex flex-col border-r border-border relative transition-colors',
+        dragOver && 'border-primary bg-primary/5',
+        mobileTab === 'chat' && 'hidden sm:flex'
+      )}
       ondragover={(e) => { e.preventDefault(); dragOver = true; }}
       ondragleave={() => dragOver = false}
       ondrop={onDrop}
@@ -175,17 +195,18 @@
       aria-label="PDF Viewer"
     >
       {#if dragOver}
-        <div class="drop-overlay">
+        <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-primary bg-primary/5 z-10 pointer-events-none text-primary font-semibold">
           <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m0-15.75h-3.75" />
           </svg>
-          <span>Hier ablegen</span>
+          Hier ablegen
         </div>
       {:else if activeDoc}
-        <div class="pdf-header">
-          <span class="pdf-title">{activeDoc.name} — {activeDoc.description}</span>
-          <a href={activeDoc.pdf_url} target="_blank" class="pdf-open-btn" title="In neuem Tab oeffnen">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="flex items-center justify-between px-3 py-2 border-b border-border bg-background flex-shrink-0">
+          <span class="text-xs text-muted-foreground truncate">{activeDoc.name} — {activeDoc.description}</span>
+          <a href={activeDoc.pdf_url} target="_blank"
+             class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-2 flex-shrink-0">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
             Vollbild
@@ -194,50 +215,57 @@
         <embed
           src="{activeDoc.pdf_url}#page={pdfPage}"
           type="application/pdf"
-          class="pdf-iframe"
-          title="{activeDoc.name}"
+          class="flex-1 w-full min-h-[60vh]"
+          title={activeDoc.name}
         />
       {/if}
     </div>
 
-    <!-- Chat -->
-    <div class="chat-panel {mobileTab === 'pdf' ? 'mobile-hidden' : ''}">
+    <!-- Chat panel -->
+    <div class={cn('flex flex-col overflow-hidden', mobileTab === 'pdf' && 'hidden sm:flex')}>
 
-      <!-- Suggestions -->
       {#if messages.length === 0 && activeDoc}
-        <div class="suggestions">
-          <p class="suggestions-label">Haeufige Fragen zu diesem Dokument:</p>
-          <div class="chips">
+        <div class="p-4 flex flex-col gap-2.5">
+          <p class="text-xs text-muted-foreground">Häufige Fragen zu diesem Dokument:</p>
+          <div class="flex flex-wrap gap-1.5">
             {#each activeDoc.suggestions as s}
-              <button class="chip" onclick={() => ask(s)}>{s}</button>
+              <button
+                onclick={() => ask(s)}
+                class="text-xs text-muted-foreground bg-secondary border border-border rounded-full px-3 py-1.5 hover:border-muted-foreground/60 hover:text-foreground hover:bg-accent transition-all text-left"
+              >{s}</button>
             {/each}
           </div>
         </div>
       {/if}
 
-      <!-- Messages -->
-      <div class="chat" bind:this={chatEl}>
+      <div class="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3" bind:this={chatEl}>
         {#each messages as msg}
           {#if msg.role === 'user'}
-            <div class="msg user">
-              <div class="bubble user-bubble">{msg.text}</div>
+            <div class="flex justify-end">
+              <div class="max-w-[85%] bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3.5 py-2.5 text-sm leading-relaxed font-medium whitespace-pre-wrap">
+                {msg.text}
+              </div>
             </div>
           {:else}
-            <div class="msg bot">
-              <div class="bot-avatar">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <div class="flex gap-2 items-start">
+              <div class="w-7 h-7 flex-shrink-0 mt-0.5 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                 </svg>
               </div>
               <div>
-                <div class="bubble bot-bubble">{msg.text}</div>
+                <div class="max-w-[85%] bg-secondary border border-border rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+                  {msg.text}
+                </div>
                 {#if msg.sources && msg.sources.length > 0}
-                  <div class="sources">
-                    <span class="sources-label">Quellen:</span>
+                  <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                    <span class="text-[11px] text-muted-foreground">Quellen:</span>
                     {#each msg.sources as page}
-                      <button class="source-badge" onclick={() => jumpToPage(page)} title="Im Viewer anzeigen">
-                        Seite {page}
-                      </button>
+                      <button
+                        onclick={() => jumpToPage(page)}
+                        class="text-[11px] font-semibold text-primary bg-primary/10 border border-primary/25 px-1.5 py-0.5 rounded hover:bg-primary/20 transition-colors"
+                        title="Im Viewer anzeigen"
+                      >Seite {page}</button>
                     {/each}
                   </div>
                 {/if}
@@ -247,22 +275,24 @@
         {/each}
 
         {#if loading}
-          <div class="msg bot">
-            <div class="bot-avatar">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <div class="flex gap-2 items-start">
+            <div class="w-7 h-7 flex-shrink-0 mt-0.5 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
             </div>
-            <div class="bubble bot-bubble typing">
-              <span></span><span></span><span></span>
+            <div class="bg-secondary border border-border rounded-2xl rounded-bl-sm px-3.5 py-3 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce-dot"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce-dot [animation-delay:0.2s]"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce-dot [animation-delay:0.4s]"></span>
             </div>
           </div>
         {/if}
       </div>
 
       <!-- Input -->
-      <div class="input-bar">
-        <div class="input-row">
+      <div class="px-3 py-2.5 border-t border-border bg-background/95 flex-shrink-0">
+        <div class="flex gap-2">
           <input
             type="text"
             placeholder="Stelle eine Frage zum Dokument..."
@@ -270,201 +300,26 @@
             onkeydown={onKeydown}
             disabled={loading || !activeDoc}
             aria-label="Frage eingeben"
+            class="flex-1 bg-secondary border border-input text-foreground placeholder:text-muted-foreground rounded-lg px-3.5 py-2 text-sm outline-none focus:border-ring transition-colors disabled:opacity-50"
           />
           <button
-            class="send-btn"
             onclick={() => ask(input)}
             disabled={loading || !input.trim() || !activeDoc}
             aria-label="Frage senden"
+            class="w-10 h-10 bg-primary text-primary-foreground rounded-lg flex items-center justify-center flex-shrink-0 hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-default"
           >
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
             </svg>
           </button>
         </div>
       </div>
-
     </div>
   </div>
 
-  <footer>
-    Demo von <a href="https://desmond.autonomika.de" target="_blank">Desmond Wong</a>
-    &mdash; Stack: Qdrant &middot; nomic-embed-text &middot; Groq &middot; SvelteKit
+  <footer class="text-center text-[11px] text-muted-foreground/50 py-2 border-t border-border">
+    Demo von <a href="https://desmond.autonomika.de" target="_blank" class="hover:text-muted-foreground transition-colors">Desmond Wong</a>
+    &mdash; Qdrant &middot; nomic-embed-text &middot; Groq &middot; SvelteKit
   </footer>
 
 </div>
-
-<style>
-  .wrapper { min-height: 100vh; display: flex; flex-direction: column; background: #0f172a; }
-
-  /* Header */
-  header {
-    position: sticky; top: 0; z-index: 20;
-    background: rgba(15,23,42,0.97); backdrop-filter: blur(8px);
-    border-bottom: 1px solid #1e293b;
-  }
-  .header-inner {
-    max-width: 1400px; margin: 0 auto; padding: 0 1.25rem;
-    height: 52px; display: flex; align-items: center; justify-content: space-between;
-  }
-  .header-left { display: flex; align-items: center; gap: 0.75rem; }
-  .icon {
-    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-    background: rgba(251,191,36,0.12); color: #fbbf24;
-    display: flex; align-items: center; justify-content: center;
-  }
-  h1 { font-size: 0.95rem; font-weight: 700; color: #f1f5f9; }
-  .subtitle { font-size: 0.7rem; color: #475569; }
-  .header-right { display: flex; align-items: center; gap: 0.75rem; }
-  .demo-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em;
-    color: #fbbf24; background: rgba(251,191,36,0.1);
-    border: 1px solid rgba(251,191,36,0.2); padding: 2px 8px; border-radius: 999px;
-  }
-  .pulse { width: 5px; height: 5px; border-radius: 50%; background: #fbbf24; animation: pulse 1.5s ease-in-out infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .back-link {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 0.72rem; color: #475569; text-decoration: none; transition: color 0.15s;
-  }
-  .back-link:hover { color: #94a3b8; }
-
-  /* Doc bar */
-  .doc-bar {
-    background: #0f172a; border-bottom: 1px solid #1e293b;
-    padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;
-    overflow-x: auto;
-  }
-  .doc-bar-label { font-size: 0.7rem; color: #475569; white-space: nowrap; flex-shrink: 0; }
-  .doc-cards { display: flex; gap: 0.5rem; }
-  .doc-card {
-    display: flex; align-items: center; gap: 0.5rem;
-    background: #1e293b; border: 1px solid #334155;
-    border-radius: 10px; padding: 0.45rem 0.75rem;
-    cursor: grab; transition: all 0.15s; white-space: nowrap; user-select: none;
-  }
-  .doc-card:hover { border-color: #475569; background: #263548; }
-  .doc-card.active { border-color: #fbbf24; background: rgba(251,191,36,0.06); }
-  .doc-card:active { cursor: grabbing; }
-  .doc-icon { width: 16px; height: 16px; color: #64748b; flex-shrink: 0; }
-  .doc-card.active .doc-icon { color: #fbbf24; }
-  .doc-card-info { display: flex; flex-direction: column; }
-  .doc-name { font-size: 0.78rem; font-weight: 600; color: #cbd5e1; line-height: 1.2; }
-  .doc-desc { font-size: 0.65rem; color: #475569; }
-  .industry-badge { font-size: 0.62rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
-  .badge-amber { color: #fbbf24; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); }
-  .badge-red { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2); }
-  .badge-blue { color: #60a5fa; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); }
-
-  /* Mobile tabs */
-  .mobile-tabs { display: none; border-bottom: 1px solid #1e293b; }
-  .tab {
-    flex: 1; padding: 0.6rem; font-size: 0.8rem; font-weight: 500;
-    background: transparent; border: none; color: #475569; cursor: pointer;
-    border-bottom: 2px solid transparent; transition: all 0.15s;
-  }
-  .tab.active { color: #fbbf24; border-bottom-color: #fbbf24; }
-
-  /* Split */
-  .split {
-    flex: 1; display: grid; grid-template-columns: 1fr 1fr;
-    min-height: 0; overflow: hidden;
-  }
-
-  /* PDF panel */
-  .pdf-panel {
-    display: flex; flex-direction: column;
-    border-right: 1px solid #1e293b; position: relative;
-    transition: border-color 0.15s;
-  }
-  .pdf-panel.drag-over { border-color: #fbbf24; background: rgba(251,191,36,0.03); }
-  .drop-overlay {
-    position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 0.75rem;
-    background: rgba(251,191,36,0.06); border: 2px dashed #fbbf24;
-    color: #fbbf24; font-size: 0.9rem; font-weight: 600; z-index: 10;
-    pointer-events: none;
-  }
-  .pdf-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.5rem 0.75rem; border-bottom: 1px solid #1e293b;
-    background: #0f172a; flex-shrink: 0;
-  }
-  .pdf-title { font-size: 0.72rem; color: #64748b; }
-  .pdf-open-btn {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 0.7rem; color: #475569; text-decoration: none; transition: color 0.15s;
-  }
-  .pdf-open-btn:hover { color: #94a3b8; }
-  .pdf-iframe { flex: 1; width: 100%; border: none; background: #1e293b; }
-
-  /* Chat panel */
-  .chat-panel {
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .suggestions { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
-  .suggestions-label { font-size: 0.7rem; color: #475569; }
-  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-  .chip {
-    font-size: 0.75rem; color: #94a3b8; background: #1e293b;
-    border: 1px solid #334155; padding: 0.3rem 0.7rem; border-radius: 999px;
-    cursor: pointer; transition: all 0.15s; text-align: left;
-  }
-  .chip:hover { background: #334155; color: #f1f5f9; border-color: #fbbf24; }
-
-  .chat { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
-  .msg { display: flex; gap: 0.5rem; }
-  .msg.user { justify-content: flex-end; }
-  .msg.bot { align-items: flex-start; }
-  .bubble { max-width: 85%; padding: 0.6rem 0.85rem; border-radius: 14px; font-size: 0.83rem; line-height: 1.6; white-space: pre-wrap; }
-  .user-bubble { background: #fbbf24; color: #1c1917; border-bottom-right-radius: 3px; font-weight: 500; }
-  .bot-bubble { background: #1e293b; color: #e2e8f0; border-bottom-left-radius: 3px; border: 1px solid #334155; }
-  .bot-avatar {
-    width: 26px; height: 26px; flex-shrink: 0; margin-top: 2px;
-    background: rgba(251,191,36,0.1); border-radius: 7px;
-    display: flex; align-items: center; justify-content: center; color: #fbbf24;
-  }
-  .sources { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; flex-wrap: wrap; }
-  .sources-label { font-size: 0.67rem; color: #475569; }
-  .source-badge {
-    font-size: 0.65rem; font-weight: 600; color: #fbbf24;
-    background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25);
-    padding: 1px 6px; border-radius: 4px; cursor: pointer; transition: all 0.15s;
-  }
-  .source-badge:hover { background: rgba(251,191,36,0.2); }
-  .typing { display: flex; align-items: center; gap: 4px; padding: 0.7rem 0.9rem; }
-  .typing span { width: 5px; height: 5px; border-radius: 50%; background: #475569; animation: bounce 1.2s ease-in-out infinite; }
-  .typing span:nth-child(2) { animation-delay: 0.2s; }
-  .typing span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
-
-  .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #1e293b; background: rgba(15,23,42,0.95); flex-shrink: 0; }
-  .input-row { display: flex; gap: 0.4rem; }
-  input {
-    flex: 1; background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
-    border-radius: 10px; padding: 0.55rem 0.85rem; font-size: 0.83rem; outline: none; transition: border-color 0.15s;
-  }
-  input:focus { border-color: #fbbf24; }
-  input::placeholder { color: #475569; }
-  input:disabled { opacity: 0.5; }
-  .send-btn {
-    width: 38px; height: 38px; background: #fbbf24; color: #1c1917; border: none;
-    border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; flex-shrink: 0;
-  }
-  .send-btn:hover:not(:disabled) { background: #f59e0b; }
-  .send-btn:disabled { opacity: 0.4; cursor: default; }
-
-  footer { text-align: center; font-size: 0.68rem; color: #334155; padding: 0.6rem; border-top: 1px solid #1e293b; }
-  footer a { color: #475569; text-decoration: none; }
-  footer a:hover { color: #94a3b8; }
-
-  /* Mobile */
-  @media (max-width: 768px) {
-    .split { grid-template-columns: 1fr; }
-    .mobile-tabs { display: flex; }
-    .mobile-hidden { display: none; }
-    .subtitle { display: none; }
-    .pdf-iframe { min-height: 60vh; }
-  }
-</style>
