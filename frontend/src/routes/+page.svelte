@@ -282,6 +282,7 @@
             </svg>
           </button>
         </div>
+        <p class="input-hint">Fragen werden zur Verarbeitung an Groq (USA) übermittelt. Keine persönlichen Daten eingeben.</p>
       </div>
 
     </div>
@@ -442,6 +443,7 @@
 
   .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #243447; background: rgba(22,32,50,0.95); flex-shrink: 0; }
   .input-row { display: flex; gap: 0.4rem; }
+  .input-hint { font-size: 0.62rem; color: #334155; margin-top: 0.35rem; }
   input {
     flex: 1; background: #1e2d42; border: 1px solid #2a3d55; color: #e2e8f0;
     border-radius: 10px; padding: 0.55rem 0.85rem; font-size: 0.83rem; outline: none; transition: border-color 0.15s;
