@@ -12,29 +12,89 @@
   };
 
   type Message = { role: 'user' | 'bot'; text: string; sources?: number[] };
+  type Phase = 'idle' | 'indexing' | 'ready' | 'answering';
+
+  const STEPS = [
+    { icon: '📄', label: 'Dokument laden' },
+    { icon: '⚙️', label: 'Embedding' },
+    { icon: '💬', label: 'Frage stellen' },
+    { icon: '🤖', label: 'Antwort' },
+  ];
+
+  const INDUSTRY_COLOR: Record<string, string> = {
+    Technologie: 'badge-amber',
+    Gastronomie: 'badge-red',
+    Immobilien: 'badge-blue',
+  };
 
   let docs = $state<Doc[]>([]);
   let activeDoc = $state<Doc | null>(null);
+  let activeDocId = $state('');
+  let activeDocName = $state('');
+  let pdfSrc = $state('');
+  let phase = $state<Phase>('idle');
+  let activeStep = $state(-1);
   let messages = $state<Message[]>([]);
   let input = $state('');
   let loading = $state(false);
   let chatEl = $state<HTMLDivElement | null>(null);
   let pdfPage = $state(1);
-  let draggingId = $state<string | null>(null);
   let dragOver = $state(false);
+  let draggingId = $state<string | null>(null);
   let mobileTab = $state<'pdf' | 'chat'>('chat');
 
   onMount(async () => {
     const res = await fetch('/api/docs');
     docs = await res.json();
-    if (docs.length > 0) selectDoc(docs[0]);
   });
 
-  function selectDoc(doc: Doc) {
-    if (activeDoc?.id === doc.id) return;
-    activeDoc = doc;
+  async function selectDoc(doc: Doc) {
+    if (phase === 'indexing') return;
+    if (activeDocId === doc.id && phase !== 'idle') return;
+
     messages = [];
     pdfPage = 1;
+    pdfSrc = '';
+    phase = 'indexing';
+    activeDoc = doc;
+    activeDocId = doc.id;
+    activeDocName = `${doc.name} — ${doc.description}`;
+
+    activeStep = 0;
+    await new Promise(r => setTimeout(r, 350));
+    activeStep = 1;
+
+    await fetch(`/api/index/${doc.id}`, { method: 'POST' });
+
+    pdfSrc = doc.pdf_url;
+    activeStep = 2;
+    phase = 'ready';
+  }
+
+  async function uploadAndIndex(file: File) {
+    if (phase === 'indexing') return;
+
+    messages = [];
+    pdfPage = 1;
+    pdfSrc = '';
+    phase = 'indexing';
+    activeDoc = null;
+    activeDocId = '';
+    activeDocName = file.name.replace(/\.pdf$/i, '');
+
+    activeStep = 0;
+    await new Promise(r => setTimeout(r, 350));
+    activeStep = 1;
+
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body: form });
+    const data = await res.json();
+
+    activeDocId = data.doc_id;
+    pdfSrc = URL.createObjectURL(file);
+    activeStep = 2;
+    phase = 'ready';
   }
 
   function scrollChat() {
@@ -42,17 +102,18 @@
   }
 
   async function ask(question: string) {
-    if (!question.trim() || loading || !activeDoc) return;
+    if (!question.trim() || loading || phase !== 'ready') return;
     messages = [...messages, { role: 'user', text: question }];
     input = '';
     loading = true;
+    activeStep = 3;
     scrollChat();
 
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, doc_id: activeDoc.id }),
+        body: JSON.stringify({ question, doc_id: activeDocId, doc_name: activeDocName }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -61,6 +122,7 @@
       messages = [...messages, { role: 'bot', text: 'Fehler beim Abrufen der Antwort.' }];
     } finally {
       loading = false;
+      activeStep = 2;
       scrollChat();
     }
   }
@@ -82,17 +144,21 @@
   function onDrop(e: DragEvent) {
     e.preventDefault();
     dragOver = false;
+    const file = e.dataTransfer?.files[0];
+    if (file?.type === 'application/pdf') {
+      uploadAndIndex(file);
+      return;
+    }
     const id = e.dataTransfer?.getData('text/plain') ?? draggingId;
     const doc = docs.find(d => d.id === id);
     if (doc) selectDoc(doc);
     draggingId = null;
   }
 
-  const INDUSTRY_COLOR: Record<string, string> = {
-    Technologie: 'badge-amber',
-    Gastronomie: 'badge-red',
-    Immobilien: 'badge-blue',
-  };
+  function onFileInput(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) uploadAndIndex(file);
+  }
 </script>
 
 <div class="wrapper">
@@ -108,7 +174,7 @@
         </div>
         <div>
           <h1>PDF Wissens-Bot</h1>
-          <p class="subtitle">Dokument waehlen &rarr; Frage stellen &rarr; Antwort mit Seitenangabe</p>
+          <p class="subtitle">Dokument einlesen &rarr; Embedding &rarr; Frage stellen &rarr; Antwort mit Seitenangabe</p>
         </div>
       </div>
       <div class="header-right">
@@ -123,14 +189,30 @@
     </div>
   </header>
 
+  <!-- Flow bar -->
+  <div class="flow-bar">
+    <p class="flow-label">So läuft die Automation:</p>
+    <div class="flow-steps">
+      {#each STEPS as step, i}
+        <div class="flow-step {activeStep === i ? 'active' : ''} {activeStep > i ? 'done' : ''}">
+          <span class="step-icon">{step.icon}</span>
+          <span class="step-label">{step.label}</span>
+        </div>
+        {#if i < STEPS.length - 1}
+          <div class="flow-arrow {activeStep > i ? 'done' : ''}">→</div>
+        {/if}
+      {/each}
+    </div>
+    <p class="flow-hint">In einer echten Integration werden Dokumente beim Upload automatisch indiziert — Mitarbeiter können sofort Fragen stellen.</p>
+  </div>
+
   <!-- Doc selector -->
   <div class="doc-bar">
     <span class="doc-bar-label">Demo-Dokumente:</span>
-    <span class="doc-bar-hint">Klicken oder in den Viewer ziehen</span>
     <div class="doc-cards">
       {#each docs as doc}
         <div
-          class="doc-card {activeDoc?.id === doc.id ? 'active' : ''}"
+          class="doc-card {activeDocId === doc.id && phase !== 'idle' ? 'active' : ''} {phase === 'indexing' && activeDocId === doc.id ? 'loading' : ''}"
           role="button"
           tabindex="0"
           draggable="true"
@@ -151,6 +233,7 @@
         </div>
       {/each}
     </div>
+    <span class="doc-bar-hint">Klicken oder in den Viewer ziehen</span>
   </div>
 
   <!-- Mobile tabs -->
@@ -166,7 +249,7 @@
   <!-- Main split -->
   <div class="split">
 
-    <!-- PDF Viewer -->
+    <!-- PDF / Drop panel -->
     <div
       class="pdf-panel {mobileTab === 'chat' ? 'mobile-hidden' : ''} {dragOver ? 'drag-over' : ''}"
       ondragover={(e) => { e.preventDefault(); dragOver = true; }}
@@ -175,29 +258,50 @@
       role="region"
       aria-label="PDF Viewer"
     >
-      {#if dragOver}
+      {#if phase === 'idle'}
+        <div class="idle-state {dragOver ? 'drag-active' : ''}">
+          <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1" class="idle-icon">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m0-15.75h-3.75" />
+          </svg>
+          <p class="idle-title">PDF hier ablegen</p>
+          <p class="idle-sub">oder Demo-Dokument oben auswählen</p>
+          <label class="upload-btn">
+            <input type="file" accept=".pdf" onchange={onFileInput} hidden />
+            Eigene PDF auswählen
+          </label>
+        </div>
+
+      {:else if phase === 'indexing'}
+        <div class="indexing-state">
+          <div class="spinner"></div>
+          <p class="indexing-title">Wird eingelesen...</p>
+          <p class="indexing-sub">Seiten werden in Vektoren umgewandelt</p>
+        </div>
+
+      {:else if dragOver}
         <div class="drop-overlay">
           <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m0-15.75h-3.75" />
           </svg>
           <span>Hier ablegen</span>
         </div>
-      {:else if activeDoc}
+
+      {:else}
         <div class="pdf-header">
-          <span class="pdf-title">{activeDoc.name} — {activeDoc.description}</span>
-          <a href={activeDoc.pdf_url} target="_blank" class="pdf-open-btn" title="In neuem Tab oeffnen">
+          <span class="pdf-title">{activeDocName}</span>
+          <a href={pdfSrc} target="_blank" class="pdf-open-btn" title="In neuem Tab oeffnen">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
             Vollbild
           </a>
         </div>
-        {#key `${activeDoc.id}-${pdfPage}`}
+        {#key `${activeDocId}-${pdfPage}`}
           <embed
-            src="{activeDoc.pdf_url}#page={pdfPage}"
+            src="{pdfSrc}#page={pdfPage}"
             type="application/pdf"
             class="pdf-iframe"
-            title="{activeDoc.name}"
+            title="{activeDocName}"
           />
         {/key}
       {/if}
@@ -206,62 +310,72 @@
     <!-- Chat -->
     <div class="chat-panel {mobileTab === 'pdf' ? 'mobile-hidden' : ''}">
 
-      <!-- Suggestions -->
-      {#if messages.length === 0 && activeDoc}
-        <div class="suggestions">
-          <p class="suggestions-label">Haeufige Fragen zu diesem Dokument:</p>
-          <div class="chips">
-            {#each activeDoc.suggestions as s}
-              <button class="chip" onclick={() => ask(s)}>{s}</button>
-            {/each}
-          </div>
+      {#if phase === 'idle'}
+        <div class="chat-idle">
+          <p>Wähle ein Dokument aus um Fragen zu stellen.</p>
         </div>
-      {/if}
-
-      <!-- Messages -->
-      <div class="chat" bind:this={chatEl}>
-        {#each messages as msg}
-          {#if msg.role === 'user'}
-            <div class="msg user">
-              <div class="bubble user-bubble">{msg.text}</div>
+      {:else if phase === 'indexing'}
+        <div class="chat-idle">
+          <p>Dokument wird eingelesen — einen Moment...</p>
+        </div>
+      {:else}
+        <!-- Suggestions -->
+        {#if messages.length === 0 && activeDoc}
+          <div class="suggestions">
+            <p class="suggestions-label">Häufige Fragen zu diesem Dokument:</p>
+            <div class="chips">
+              {#each activeDoc.suggestions as s}
+                <button class="chip" onclick={() => ask(s)}>{s}</button>
+              {/each}
             </div>
-          {:else}
+          </div>
+        {/if}
+
+        <!-- Messages -->
+        <div class="chat" bind:this={chatEl}>
+          {#each messages as msg}
+            {#if msg.role === 'user'}
+              <div class="msg user">
+                <div class="bubble user-bubble">{msg.text}</div>
+              </div>
+            {:else}
+              <div class="msg bot">
+                <div class="bot-avatar">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="bubble bot-bubble">{msg.text}</div>
+                  {#if msg.sources && msg.sources.length > 0}
+                    <div class="sources">
+                      <span class="sources-label">Quellen:</span>
+                      {#each msg.sources as page}
+                        <button class="source-badge" onclick={() => jumpToPage(page)} title="Im Viewer anzeigen">
+                          Seite {page}
+                        </button>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              </div>
+            {/if}
+          {/each}
+
+          {#if loading}
             <div class="msg bot">
               <div class="bot-avatar">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                 </svg>
               </div>
-              <div>
-                <div class="bubble bot-bubble">{msg.text}</div>
-                {#if msg.sources && msg.sources.length > 0}
-                  <div class="sources">
-                    <span class="sources-label">Quellen:</span>
-                    {#each msg.sources as page}
-                      <button class="source-badge" onclick={() => jumpToPage(page)} title="Im Viewer anzeigen">
-                        Seite {page}
-                      </button>
-                    {/each}
-                  </div>
-                {/if}
+              <div class="bubble bot-bubble typing">
+                <span></span><span></span><span></span>
               </div>
             </div>
           {/if}
-        {/each}
-
-        {#if loading}
-          <div class="msg bot">
-            <div class="bot-avatar">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-              </svg>
-            </div>
-            <div class="bubble bot-bubble typing">
-              <span></span><span></span><span></span>
-            </div>
-          </div>
-        {/if}
-      </div>
+        </div>
+      {/if}
 
       <!-- Input -->
       <div class="input-bar">
@@ -271,13 +385,13 @@
             placeholder="Stelle eine Frage zum Dokument..."
             bind:value={input}
             onkeydown={onKeydown}
-            disabled={loading || !activeDoc}
+            disabled={loading || phase !== 'ready'}
             aria-label="Frage eingeben"
           />
           <button
             class="send-btn"
             onclick={() => ask(input)}
-            disabled={loading || !input.trim() || !activeDoc}
+            disabled={loading || !input.trim() || phase !== 'ready'}
             aria-label="Frage senden"
           >
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -340,6 +454,26 @@
   }
   .back-link:hover { color: #94a3b8; }
 
+  /* Flow bar */
+  .flow-bar {
+    background: #1e2d42; border-bottom: 1px solid #243447;
+    padding: 0.75rem 1.25rem; display: flex; flex-direction: column; align-items: center;
+  }
+  .flow-label { font-size: 0.75rem; color: #b0bfcc; margin-bottom: 0.5rem; }
+  .flow-steps { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+  .flow-step {
+    display: flex; align-items: center; gap: 0.4rem;
+    background: #162032; border: 1px solid #243447;
+    border-radius: 8px; padding: 0.35rem 0.65rem;
+    font-size: 0.82rem; color: #b0bfcc; transition: all 0.3s;
+  }
+  .flow-step.active { border-color: #fbbf24; color: #fbbf24; background: rgba(251,191,36,0.06); box-shadow: 0 0 12px rgba(251,191,36,0.15); }
+  .flow-step.done { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.06); }
+  .step-icon { font-size: 0.9rem; }
+  .flow-arrow { font-size: 0.75rem; color: #475569; transition: color 0.3s; }
+  .flow-arrow.done { color: #22c55e; }
+  .flow-hint { font-size: 0.73rem; color: #94a3b8; margin-top: 0.5rem; text-align: center; }
+
   /* Doc bar */
   .doc-bar {
     background: #162032; border-bottom: 1px solid #243447;
@@ -357,6 +491,7 @@
   }
   .doc-card:hover { border-color: #3d5470; background: #263548; }
   .doc-card.active { border-color: #fbbf24; background: rgba(251,191,36,0.06); }
+  .doc-card.loading { opacity: 0.6; cursor: wait; }
   .doc-card:active { cursor: grabbing; }
   .doc-icon { width: 16px; height: 16px; color: #64748b; flex-shrink: 0; }
   .doc-card.active .doc-icon { color: #fbbf24; }
@@ -378,10 +513,7 @@
   .tab.active { color: #fbbf24; border-bottom-color: #fbbf24; }
 
   /* Split */
-  .split {
-    flex: 1; display: grid; grid-template-columns: 1fr 1fr;
-    min-height: 0; overflow: hidden;
-  }
+  .split { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; overflow: hidden; }
 
   /* PDF panel */
   .pdf-panel {
@@ -389,7 +521,40 @@
     border-right: 1px solid #243447; position: relative;
     transition: border-color 0.15s;
   }
-  .pdf-panel.drag-over { border-color: #fbbf24; background: rgba(251,191,36,0.03); }
+  .pdf-panel.drag-over { border-color: #fbbf24; }
+
+  /* Idle state */
+  .idle-state {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.75rem; padding: 2rem;
+    border: 2px dashed #2a3d55; margin: 1rem; border-radius: 12px;
+    transition: all 0.2s;
+  }
+  .idle-state.drag-active { border-color: #fbbf24; background: rgba(251,191,36,0.04); }
+  .idle-icon { color: #3d5470; }
+  .idle-title { font-size: 1rem; font-weight: 600; color: #94a3b8; }
+  .idle-sub { font-size: 0.8rem; color: #475569; text-align: center; }
+  .upload-btn {
+    margin-top: 0.25rem; padding: 0.45rem 1.1rem;
+    font-size: 0.8rem; font-weight: 500; color: #94a3b8;
+    background: #1e2d42; border: 1px solid #2a3d55;
+    border-radius: 8px; cursor: pointer; transition: all 0.15s;
+  }
+  .upload-btn:hover { border-color: #fbbf24; color: #fbbf24; }
+
+  /* Indexing state */
+  .indexing-state {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
+  }
+  .spinner {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid #243447; border-top-color: #fbbf24;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .indexing-title { font-size: 0.95rem; font-weight: 600; color: #94a3b8; }
+  .indexing-sub { font-size: 0.78rem; color: #475569; }
+
   .drop-overlay {
     position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 0.75rem;
@@ -411,8 +576,10 @@
   .pdf-iframe { flex: 1; width: 100%; border: none; background: #1e2d42; }
 
   /* Chat panel */
-  .chat-panel {
-    display: flex; flex-direction: column; overflow: hidden;
+  .chat-panel { display: flex; flex-direction: column; overflow: hidden; }
+  .chat-idle {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; color: #475569; padding: 2rem; text-align: center;
   }
   .suggestions { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
   .suggestions-label { font-size: 0.76rem; color: #94a3b8; }
@@ -477,7 +644,6 @@
   footer a { color: #475569; text-decoration: none; }
   footer a:hover { color: #94a3b8; }
 
-  /* Mobile */
   @media (max-width: 768px) {
     .split { grid-template-columns: 1fr; }
     .mobile-tabs { display: flex; }

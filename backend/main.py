@@ -1,6 +1,8 @@
 import os
+import tempfile
+import hashlib
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -69,6 +71,7 @@ DOCS = [
 
 qdrant: QdrantClient | None = None
 groq_client: Groq | None = None
+_indexed: set[str] = set()
 
 
 @asynccontextmanager
@@ -76,11 +79,6 @@ async def lifespan(app: FastAPI):
     global qdrant, groq_client
     qdrant = QdrantClient(host=QDRANT_HOST, port=6333)
     groq_client = Groq(api_key=GROQ_API_KEY)
-    for doc in DOCS:
-        pdf_path = f"{DOCS_DIR}/{doc['pdf_file']}"
-        print(f"Indexing {doc['id']}...", flush=True)
-        count = rag.index_pdf(pdf_path, doc["id"], qdrant, OLLAMA_HOST)
-        print(f"  -> {count} chunks", flush=True)
     yield
 
 
@@ -93,6 +91,11 @@ app.add_middleware(
 )
 
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
 @app.get("/pdfs/{filename}")
 def serve_pdf(filename: str):
     safe = filename.replace("/", "").replace("..", "")
@@ -102,11 +105,6 @@ def serve_pdf(filename: str):
         media_type="application/pdf",
         headers={"Content-Disposition": f"inline; filename={safe}"},
     )
-
-
-@app.get("/api/health")
-def health():
-    return {"status": "ok"}
 
 
 @app.get("/api/docs")
@@ -124,9 +122,40 @@ def list_docs():
     ]
 
 
+@app.post("/api/index/{doc_id}")
+def index_demo(doc_id: str):
+    doc = next((d for d in DOCS if d["id"] == doc_id), None)
+    if not doc:
+        raise HTTPException(404, "Dokument nicht gefunden")
+    if doc_id in _indexed:
+        return {"doc_id": doc_id, "chunks": 0, "cached": True}
+    pdf_path = f"{DOCS_DIR}/{doc['pdf_file']}"
+    count = rag.index_pdf(pdf_path, doc_id, qdrant, OLLAMA_HOST)
+    _indexed.add(doc_id)
+    return {"doc_id": doc_id, "chunks": count, "cached": False}
+
+
+@app.post("/api/upload")
+async def upload_pdf(file: UploadFile = File(...)):
+    contents = await file.read()
+    doc_id = "up_" + hashlib.md5(contents).hexdigest()[:12]
+    if doc_id in _indexed:
+        return {"doc_id": doc_id, "chunks": 0, "name": file.filename, "cached": True}
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+    try:
+        count = rag.index_pdf(tmp_path, doc_id, qdrant, OLLAMA_HOST)
+    finally:
+        os.unlink(tmp_path)
+    _indexed.add(doc_id)
+    return {"doc_id": doc_id, "chunks": count, "name": file.filename, "cached": False}
+
+
 class ChatRequest(BaseModel):
     question: str
-    doc_id: str = "autonomika"
+    doc_id: str
+    doc_name: str = "Dokument"
 
 
 class ChatResponse(BaseModel):
@@ -139,10 +168,6 @@ def chat(req: ChatRequest):
     if not req.question.strip():
         raise HTTPException(400, "Frage darf nicht leer sein.")
 
-    doc = next((d for d in DOCS if d["id"] == req.doc_id), None)
-    if not doc:
-        raise HTTPException(404, f"Dokument '{req.doc_id}' nicht gefunden.")
-
     chunks = rag.search(req.question, req.doc_id, qdrant, OLLAMA_HOST)
     context = "\n\n".join(f"[Seite {c['page']}]: {c['text']}" for c in chunks)
 
@@ -152,7 +177,7 @@ def chat(req: ChatRequest):
             {
                 "role": "system",
                 "content": (
-                    f"Du bist ein hilfreicher Assistent fuer das Dokument '{doc['name']} - {doc['description']}'. "
+                    f"Du bist ein hilfreicher Assistent fuer das Dokument '{req.doc_name}'. "
                     "Beantworte Fragen ausschliesslich basierend auf dem bereitgestellten Kontext. "
                     "Gib immer die Seitenzahl an (z.B. 'Laut Seite 3...'). "
                     "Wenn die Antwort nicht im Kontext steht, sage das klar und knapp."
