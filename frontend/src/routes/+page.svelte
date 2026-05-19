@@ -295,13 +295,13 @@
 </div>
 
 <style>
-  .wrapper { min-height: 100vh; display: flex; flex-direction: column; background: #1e293b; }
+  .wrapper { min-height: 100vh; display: flex; flex-direction: column; background: #162032; }
 
   /* Header */
   header {
     position: sticky; top: 0; z-index: 20;
-    background: rgba(30,41,59,0.97); backdrop-filter: blur(8px);
-    border-bottom: 1px solid #334155;
+    background: rgba(22,32,50,0.97); backdrop-filter: blur(8px);
+    border-bottom: 1px solid #243447;
   }
   .header-inner {
     max-width: 1400px; margin: 0 auto; padding: 0 1.25rem;
@@ -332,7 +332,7 @@
 
   /* Doc bar */
   .doc-bar {
-    background: #1e293b; border-bottom: 1px solid #334155;
+    background: #162032; border-bottom: 1px solid #243447;
     padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;
     overflow-x: auto;
   }
@@ -340,11 +340,11 @@
   .doc-cards { display: flex; gap: 0.5rem; }
   .doc-card {
     display: flex; align-items: center; gap: 0.5rem;
-    background: #263548; border: 1px solid #3d4f67;
+    background: #1e2d42; border: 1px solid #2a3d55;
     border-radius: 10px; padding: 0.45rem 0.75rem;
     cursor: grab; transition: all 0.15s; white-space: nowrap; user-select: none;
   }
-  .doc-card:hover { border-color: #475569; background: #334155; }
+  .doc-card:hover { border-color: #3d5470; background: #263548; }
   .doc-card.active { border-color: #fbbf24; background: rgba(251,191,36,0.06); }
   .doc-card:active { cursor: grabbing; }
   .doc-icon { width: 16px; height: 16px; color: #64748b; flex-shrink: 0; }
@@ -358,7 +358,7 @@
   .badge-blue { color: #60a5fa; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); }
 
   /* Mobile tabs */
-  .mobile-tabs { display: none; border-bottom: 1px solid #334155; }
+  .mobile-tabs { display: none; border-bottom: 1px solid #243447; }
   .tab {
     flex: 1; padding: 0.6rem; font-size: 0.8rem; font-weight: 500;
     background: transparent; border: none; color: #475569; cursor: pointer;
@@ -375,7 +375,7 @@
   /* PDF panel */
   .pdf-panel {
     display: flex; flex-direction: column;
-    border-right: 1px solid #334155; position: relative;
+    border-right: 1px solid #243447; position: relative;
     transition: border-color 0.15s;
   }
   .pdf-panel.drag-over { border-color: #fbbf24; background: rgba(251,191,36,0.03); }
@@ -388,8 +388,8 @@
   }
   .pdf-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 0.5rem 0.75rem; border-bottom: 1px solid #334155;
-    background: #1e293b; flex-shrink: 0;
+    padding: 0.5rem 0.75rem; border-bottom: 1px solid #243447;
+    background: #162032; flex-shrink: 0;
   }
   .pdf-title { font-size: 0.72rem; color: #64748b; }
   .pdf-open-btn {
@@ -397,7 +397,7 @@
     font-size: 0.7rem; color: #475569; text-decoration: none; transition: color 0.15s;
   }
   .pdf-open-btn:hover { color: #94a3b8; }
-  .pdf-iframe { flex: 1; width: 100%; border: none; background: #263548; }
+  .pdf-iframe { flex: 1; width: 100%; border: none; background: #1e2d42; }
 
   /* Chat panel */
   .chat-panel {
@@ -407,11 +407,11 @@
   .suggestions-label { font-size: 0.7rem; color: #475569; }
   .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .chip {
-    font-size: 0.75rem; color: #94a3b8; background: #263548;
-    border: 1px solid #3d4f67; padding: 0.3rem 0.7rem; border-radius: 999px;
+    font-size: 0.75rem; color: #94a3b8; background: #1e2d42;
+    border: 1px solid #2a3d55; padding: 0.3rem 0.7rem; border-radius: 999px;
     cursor: pointer; transition: all 0.15s; text-align: left;
   }
-  .chip:hover { background: #334155; color: #f1f5f9; border-color: #fbbf24; }
+  .chip:hover { background: #263548; color: #f1f5f9; border-color: #fbbf24; }
 
   .chat { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .msg { display: flex; gap: 0.5rem; }
@@ -419,7 +419,7 @@
   .msg.bot { align-items: flex-start; }
   .bubble { max-width: 85%; padding: 0.6rem 0.85rem; border-radius: 14px; font-size: 0.83rem; line-height: 1.6; white-space: pre-wrap; }
   .user-bubble { background: #fbbf24; color: #1c1917; border-bottom-right-radius: 3px; font-weight: 500; }
-  .bot-bubble { background: #263548; color: #e2e8f0; border-bottom-left-radius: 3px; border: 1px solid #3d4f67; }
+  .bot-bubble { background: #1e2d42; color: #e2e8f0; border-bottom-left-radius: 3px; border: 1px solid #2a3d55; }
   .bot-avatar {
     width: 26px; height: 26px; flex-shrink: 0; margin-top: 2px;
     background: rgba(251,191,36,0.1); border-radius: 7px;
@@ -439,10 +439,10 @@
   .typing span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
 
-  .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #334155; background: rgba(30,41,59,0.95); flex-shrink: 0; }
+  .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #243447; background: rgba(22,32,50,0.95); flex-shrink: 0; }
   .input-row { display: flex; gap: 0.4rem; }
   input {
-    flex: 1; background: #263548; border: 1px solid #3d4f67; color: #e2e8f0;
+    flex: 1; background: #1e2d42; border: 1px solid #2a3d55; color: #e2e8f0;
     border-radius: 10px; padding: 0.55rem 0.85rem; font-size: 0.83rem; outline: none; transition: border-color 0.15s;
   }
   input:focus { border-color: #fbbf24; }
@@ -455,7 +455,7 @@
   .send-btn:hover:not(:disabled) { background: #f59e0b; }
   .send-btn:disabled { opacity: 0.4; cursor: default; }
 
-  footer { text-align: center; font-size: 0.68rem; color: #475569; padding: 0.6rem; border-top: 1px solid #334155; }
+  footer { text-align: center; font-size: 0.68rem; color: #475569; padding: 0.6rem; border-top: 1px solid #243447; }
   footer a { color: #475569; text-decoration: none; }
   footer a:hover { color: #94a3b8; }
 
