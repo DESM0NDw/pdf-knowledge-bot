@@ -290,6 +290,7 @@
   <footer>
     Demo von <a href="https://desmond.autonomika.de" target="_blank">Desmond Wong</a>
     &mdash; Stack: Qdrant &middot; nomic-embed-text &middot; Groq &middot; SvelteKit
+    &middot; <a href="/impressum">Impressum & Datenschutz</a>
   </footer>
 
 </div>
