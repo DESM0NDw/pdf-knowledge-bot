@@ -282,7 +282,12 @@
             </svg>
           </button>
         </div>
-        <p class="input-hint">Fragen werden zur Verarbeitung an Groq (USA) übermittelt. Keine persönlichen Daten eingeben.</p>
+        <div class="warn-box">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span>Fragen werden zur Verarbeitung an <strong>Groq (USA)</strong> übermittelt und können dort gespeichert werden. Bitte <strong>keine persönlichen oder vertraulichen Daten</strong> eingeben.</span>
+        </div>
       </div>
 
     </div>
@@ -443,7 +448,13 @@
 
   .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #243447; background: rgba(22,32,50,0.95); flex-shrink: 0; }
   .input-row { display: flex; gap: 0.4rem; }
-  .input-hint { font-size: 0.62rem; color: #334155; margin-top: 0.35rem; }
+  .warn-box {
+    display: flex; align-items: flex-start; gap: 0.5rem;
+    background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.2);
+    border-radius: 8px; padding: 0.6rem 0.75rem; margin-top: 0.35rem;
+    font-size: 0.75rem; color: #b8900a; line-height: 1.5;
+  }
+  .warn-box strong { color: #d4a820; }
   input {
     flex: 1; background: #1e2d42; border: 1px solid #2a3d55; color: #e2e8f0;
     border-radius: 10px; padding: 0.55rem 0.85rem; font-size: 0.83rem; outline: none; transition: border-color 0.15s;
