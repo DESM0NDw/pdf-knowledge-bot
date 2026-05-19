@@ -25,12 +25,6 @@
     <h1>Datenschutzerklärung</h1>
 
     <section>
-      <h2>Verantwortlicher</h2>
-      <p>Desmond Wong, Lichtenbroicher Weg 29, 40472 Düsseldorf<br>
-      E-Mail: <a href="mailto:desmond.wong.dev@proton.me">desmond.wong.dev@proton.me</a></p>
-    </section>
-
-    <section>
       <h2>Erhobene Daten</h2>
       <p>Diese Website setzt keine Tracking-Cookies und verwendet keine Analyse-Tools. Es werden keine personenbezogenen Nutzerdaten dauerhaft gespeichert.</p>
       <p>Beim Besuch der Website werden durch den Webserver technische Zugriffsdaten (IP-Adresse, Zeitstempel, aufgerufene Seite) im Rahmen normaler Server-Logs kurzfristig verarbeitet.</p>
