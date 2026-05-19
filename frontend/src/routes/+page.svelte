@@ -126,6 +126,7 @@
   <!-- Doc selector -->
   <div class="doc-bar">
     <span class="doc-bar-label">Demo-Dokumente:</span>
+    <span class="doc-bar-hint">Klicken oder in den Viewer ziehen</span>
     <div class="doc-cards">
       {#each docs as doc}
         <div
@@ -191,12 +192,14 @@
             Vollbild
           </a>
         </div>
-        <embed
-          src="{activeDoc.pdf_url}#page={pdfPage}"
-          type="application/pdf"
-          class="pdf-iframe"
-          title="{activeDoc.name}"
-        />
+        {#key `${activeDoc.id}-${pdfPage}`}
+          <embed
+            src="{activeDoc.pdf_url}#page={pdfPage}"
+            type="application/pdf"
+            class="pdf-iframe"
+            title="{activeDoc.name}"
+          />
+        {/key}
       {/if}
     </div>
 
@@ -321,7 +324,7 @@
     display: flex; align-items: center; justify-content: center;
   }
   h1 { font-size: 0.95rem; font-weight: 700; color: #f1f5f9; }
-  .subtitle { font-size: 0.7rem; color: #475569; }
+  .subtitle { font-size: 0.76rem; color: #94a3b8; }
   .header-right { display: flex; align-items: center; gap: 0.75rem; }
   .demo-badge {
     display: inline-flex; align-items: center; gap: 5px;
@@ -333,7 +336,7 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .back-link {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 0.72rem; color: #475569; text-decoration: none; transition: color 0.15s;
+    font-size: 0.78rem; color: #94a3b8; text-decoration: none; transition: color 0.15s;
   }
   .back-link:hover { color: #94a3b8; }
 
@@ -343,7 +346,8 @@
     padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;
     overflow-x: auto;
   }
-  .doc-bar-label { font-size: 0.7rem; color: #475569; white-space: nowrap; flex-shrink: 0; }
+  .doc-bar-label { font-size: 0.76rem; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
+  .doc-bar-hint { font-size: 0.72rem; color: #475569; white-space: nowrap; flex-shrink: 0; }
   .doc-cards { display: flex; gap: 0.5rem; }
   .doc-card {
     display: flex; align-items: center; gap: 0.5rem;
@@ -357,8 +361,8 @@
   .doc-icon { width: 16px; height: 16px; color: #64748b; flex-shrink: 0; }
   .doc-card.active .doc-icon { color: #fbbf24; }
   .doc-card-info { display: flex; flex-direction: column; }
-  .doc-name { font-size: 0.78rem; font-weight: 600; color: #cbd5e1; line-height: 1.2; }
-  .doc-desc { font-size: 0.65rem; color: #475569; }
+  .doc-name { font-size: 0.85rem; font-weight: 600; color: #e2eaf2; line-height: 1.2; }
+  .doc-desc { font-size: 0.72rem; color: #94a3b8; }
   .industry-badge { font-size: 0.62rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
   .badge-amber { color: #fbbf24; background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.2); }
   .badge-red { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2); }
@@ -398,10 +402,10 @@
     padding: 0.5rem 0.75rem; border-bottom: 1px solid #243447;
     background: #162032; flex-shrink: 0;
   }
-  .pdf-title { font-size: 0.72rem; color: #64748b; }
+  .pdf-title { font-size: 0.78rem; color: #94a3b8; }
   .pdf-open-btn {
     display: inline-flex; align-items: center; gap: 4px;
-    font-size: 0.7rem; color: #475569; text-decoration: none; transition: color 0.15s;
+    font-size: 0.76rem; color: #94a3b8; text-decoration: none; transition: color 0.15s;
   }
   .pdf-open-btn:hover { color: #94a3b8; }
   .pdf-iframe { flex: 1; width: 100%; border: none; background: #1e2d42; }
@@ -411,7 +415,7 @@
     display: flex; flex-direction: column; overflow: hidden;
   }
   .suggestions { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
-  .suggestions-label { font-size: 0.7rem; color: #475569; }
+  .suggestions-label { font-size: 0.76rem; color: #94a3b8; }
   .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .chip {
     font-size: 0.75rem; color: #94a3b8; background: #1e2d42;
@@ -433,7 +437,7 @@
     display: flex; align-items: center; justify-content: center; color: #fbbf24;
   }
   .sources { display: flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; flex-wrap: wrap; }
-  .sources-label { font-size: 0.67rem; color: #475569; }
+  .sources-label { font-size: 0.74rem; color: #94a3b8; }
   .source-badge {
     font-size: 0.65rem; font-weight: 600; color: #fbbf24;
     background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25);
