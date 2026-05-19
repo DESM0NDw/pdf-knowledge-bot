@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 from groq import Groq
@@ -91,7 +91,17 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
-app.mount("/pdfs", StaticFiles(directory=DOCS_DIR), name="pdfs")
+
+
+@app.get("/pdfs/{filename}")
+def serve_pdf(filename: str):
+    safe = filename.replace("/", "").replace("..", "")
+    path = f"{DOCS_DIR}/{safe}"
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename={safe}"},
+    )
 
 
 @app.get("/api/health")

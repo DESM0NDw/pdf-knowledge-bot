@@ -191,11 +191,12 @@
             Vollbild
           </a>
         </div>
-        <iframe
+        <embed
           src="{activeDoc.pdf_url}#page={pdfPage}"
-          title="{activeDoc.name}"
+          type="application/pdf"
           class="pdf-iframe"
-        ></iframe>
+          title="{activeDoc.name}"
+        />
       {/if}
     </div>
 
