@@ -17,7 +17,7 @@
         40472 Düsseldorf<br>
         Deutschland
       </p>
-      <p>E-Mail: <a href="mailto:desmond.wong@gmx.de">desmond.wong@gmx.de</a></p>
+      <p>E-Mail: <a href="mailto:desmond.wong.dev@proton.me">desmond.wong.dev@proton.me</a></p>
     </section>
 
     <hr>
@@ -27,7 +27,7 @@
     <section>
       <h2>Verantwortlicher</h2>
       <p>Desmond Wong, Lichtenbroicher Weg 29, 40472 Düsseldorf<br>
-      E-Mail: <a href="mailto:desmond.wong@gmx.de">desmond.wong@gmx.de</a></p>
+      E-Mail: <a href="mailto:desmond.wong.dev@proton.me">desmond.wong.dev@proton.me</a></p>
     </section>
 
     <section>
@@ -44,7 +44,7 @@
 
     <section>
       <h2>Ihre Rechte</h2>
-      <p>Sie haben jederzeit das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung Ihrer personenbezogenen Daten sowie das Recht auf Datenübertragbarkeit. Wenden Sie sich dazu an: <a href="mailto:desmond.wong@gmx.de">desmond.wong@gmx.de</a></p>
+      <p>Sie haben jederzeit das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung Ihrer personenbezogenen Daten sowie das Recht auf Datenübertragbarkeit. Wenden Sie sich dazu an: <a href="mailto:desmond.wong.dev@proton.me">desmond.wong.dev@proton.me</a></p>
       <p>Beschwerden können Sie bei der zuständigen Aufsichtsbehörde einreichen: Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (<a href="https://www.ldi.nrw.de" target="_blank" rel="noopener">ldi.nrw.de</a>).</p>
     </section>
 
