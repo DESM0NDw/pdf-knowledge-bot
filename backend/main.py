@@ -97,7 +97,7 @@ def get_ip(request: Request) -> str:
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://pdf-demo.autonomika.de"],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
