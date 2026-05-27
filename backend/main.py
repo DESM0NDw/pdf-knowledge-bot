@@ -4,6 +4,7 @@ import tempfile
 import hashlib
 from collections import defaultdict
 from contextlib import asynccontextmanager
+import sentry_sdk
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -13,6 +14,9 @@ from groq import Groq
 import rag
 
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
+
+if dsn := os.getenv("SENTRY_DSN", ""):
+    sentry_sdk.init(dsn=dsn, traces_sample_rate=0.2)
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "1Panel-ollama-1RR8")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 DOCS_DIR = "/docs"
