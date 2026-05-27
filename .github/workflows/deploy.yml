@@ -17,6 +17,5 @@ jobs:
           script: |
             cd /home/desmond/projects/pdf-knowledge-bot
             git pull
-            docker compose build
-            docker compose up -d
+            docker compose up -d --build --force-recreate
           command_timeout: 10m
