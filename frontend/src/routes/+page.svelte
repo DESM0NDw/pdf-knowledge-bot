@@ -58,6 +58,7 @@
 
   let stepLabels = $derived(activeDoc?.flow_steps ?? DEFAULT_STEPS);
   let flowHint = $derived(activeDoc?.flow_hint ?? DEFAULT_HINT);
+  let suggestOpen = $state(true);
 
   onMount(async () => {
     const res = await fetch('/api/docs');
@@ -376,40 +377,6 @@
           <p>Dokument wird eingelesen — einen Moment...</p>
         </div>
       {:else}
-        <!-- FAQ / Suggestions -->
-        {#if messages.length === 0}
-          <div class="suggestions">
-            {#if trackedQuestions.length > 0}
-              {@const maxCount = Math.max(...trackedQuestions.map(q => q.count))}
-              <p class="suggestions-label">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-                </svg>
-                Was andere am häufigsten fragen
-              </p>
-              <div class="faq-list">
-                {#each trackedQuestions as q (q.text)}
-                  <button class="faq-item" onclick={() => ask(q.text)}>
-                    <span class="faq-bar" style="width: {Math.max((q.count / maxCount) * 100, 8)}%"></span>
-                    <span class="faq-text">{q.text}</span>
-                    <span class="faq-count">{q.count}×</span>
-                  </button>
-                {/each}
-              </div>
-              <p class="faq-hint">
-                Fragen werden semantisch gruppiert — unterschiedlich formulierte, aber inhaltsgleiche Fragen zählen zum selben Eintrag.
-              </p>
-            {:else if activeDoc}
-              <p class="suggestions-label">Beispielfragen zu diesem Dokument:</p>
-              <div class="chips">
-                {#each activeDoc.suggestions as s}
-                  <button class="chip" onclick={() => ask(s)}>{s}</button>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        {/if}
-
         <!-- Messages -->
         <div class="chat" bind:this={chatEl}>
           {#each messages as msg}
@@ -451,6 +418,47 @@
               <div class="bubble bot-bubble typing">
                 <span></span><span></span><span></span>
               </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
+      <!-- Suggestion dock: always available so you can keep clicking -->
+      {#if phase === 'ready' && (trackedQuestions.length > 0 || activeDoc)}
+        <div class="suggest-dock">
+          <button class="suggest-toggle" onclick={() => (suggestOpen = !suggestOpen)} aria-expanded={suggestOpen}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+            </svg>
+            <span>Fragen-Vorschläge</span>
+            <svg class="suggest-chevron {suggestOpen ? 'open' : ''}" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+
+          {#if suggestOpen}
+            <div class="suggest-body">
+              {#if trackedQuestions.length > 0}
+                {@const maxCount = Math.max(...trackedQuestions.map(q => q.count))}
+                <p class="suggest-label">Was andere am häufigsten fragen</p>
+                <div class="faq-list">
+                  {#each trackedQuestions as q (q.text)}
+                    <button class="faq-item" onclick={() => ask(q.text)}>
+                      <span class="faq-bar" style="width: {Math.max((q.count / maxCount) * 100, 8)}%"></span>
+                      <span class="faq-text">{q.text}</span>
+                      <span class="faq-count">{q.count}×</span>
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+              {#if activeDoc}
+                <p class="suggest-label">Beispielfragen{trackedQuestions.length > 0 ? ' — zum Testen & Erweitern' : ''}</p>
+                <div class="chips">
+                  {#each activeDoc.suggestions as s}
+                    <button class="chip" onclick={() => ask(s)}>{s}</button>
+                  {/each}
+                </div>
+              {/if}
             </div>
           {/if}
         </div>
@@ -683,8 +691,18 @@
     flex: 1; display: flex; align-items: center; justify-content: center;
     font-size: 0.85rem; color: #475569; padding: 2rem; text-align: center;
   }
-  .suggestions { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
-  .suggestions-label { font-size: 0.76rem; color: #94a3b8; display: flex; align-items: center; gap: 0.4rem; }
+  /* Suggestion dock (always available above the input) */
+  .suggest-dock { border-top: 1px solid #1e1e1e; background: #0c0c0c; flex-shrink: 0; display: flex; flex-direction: column; max-height: 42vh; }
+  .suggest-toggle {
+    display: flex; align-items: center; gap: 0.5rem; width: 100%;
+    padding: 0.5rem 0.85rem; background: transparent; border: none;
+    color: #94a3b8; font-size: 0.76rem; font-weight: 500; cursor: pointer; transition: color 0.15s;
+  }
+  .suggest-toggle:hover { color: #e2eaf2; }
+  .suggest-chevron { margin-left: auto; transition: transform 0.2s; }
+  .suggest-chevron.open { transform: rotate(180deg); }
+  .suggest-body { padding: 0 0.85rem 0.7rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; }
+  .suggest-label { font-size: 0.72rem; color: #64748b; margin-top: 0.3rem; }
   .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .chip {
     font-size: 0.75rem; color: #94a3b8; background: #111;
@@ -713,7 +731,6 @@
     font-size: 0.7rem; font-weight: 700; color: #22d3ee;
     background: rgba(34,211,238,0.15); padding: 1px 6px; border-radius: 4px;
   }
-  .faq-hint { font-size: 0.7rem; color: #475569; line-height: 1.4; margin-top: 0.15rem; }
 
   /* Cluster feedback toast */
   .cluster-toast {
