@@ -45,6 +45,8 @@
   let draggingId = $state<string | null>(null);
   let mobileTab = $state<'pdf' | 'chat'>('chat');
   let trackedQuestions = $state<TrackedQuestion[]>([]);
+  let clusterFeedback = $state<{ isNew: boolean; count: number } | null>(null);
+  let feedbackTimer: ReturnType<typeof setTimeout>;
 
   onMount(async () => {
     const res = await fetch('/api/docs');
@@ -54,6 +56,13 @@
   async function fetchTracked(docId: string) {
     const res = await fetch(`/api/questions/${docId}`);
     if (res.ok) trackedQuestions = await res.json();
+  }
+
+  function showClusterFeedback(isNew: boolean, count: number) {
+    if (count === 0) return;
+    clusterFeedback = { isNew, count };
+    clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => (clusterFeedback = null), 4000);
   }
 
   async function selectDoc(doc: Doc) {
@@ -142,6 +151,7 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       messages = [...messages, { role: 'bot', text: data.answer, sources: data.sources }];
+      showClusterFeedback(data.is_new_question, data.question_count);
       fetchTracked(activeDocId);
     } catch {
       messages = [...messages, { role: 'bot', text: 'Fehler beim Abrufen der Antwort.' }];
@@ -355,23 +365,37 @@
           <p>Dokument wird eingelesen — einen Moment...</p>
         </div>
       {:else}
-        <!-- Suggestions -->
-        {#if messages.length === 0 && (activeDoc || trackedQuestions.length > 0)}
-          {@const chips = trackedQuestions.length > 0
-            ? trackedQuestions
-            : (activeDoc?.suggestions ?? []).map(s => ({ text: s, count: 0 }))}
+        <!-- FAQ / Suggestions -->
+        {#if messages.length === 0}
           <div class="suggestions">
-            <p class="suggestions-label">
-              {trackedQuestions.length > 0 ? 'Häufig gestellt:' : 'Häufige Fragen zu diesem Dokument:'}
-            </p>
-            <div class="chips">
-              {#each chips as q}
-                <button class="chip" onclick={() => ask(q.text)}>
-                  {q.text}
-                  {#if q.count > 1}<span class="chip-count">×{q.count}</span>{/if}
-                </button>
-              {/each}
-            </div>
+            {#if trackedQuestions.length > 0}
+              {@const maxCount = Math.max(...trackedQuestions.map(q => q.count))}
+              <p class="suggestions-label">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" style="flex-shrink:0">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+                Was andere am häufigsten fragen
+              </p>
+              <div class="faq-list">
+                {#each trackedQuestions as q (q.text)}
+                  <button class="faq-item" onclick={() => ask(q.text)}>
+                    <span class="faq-bar" style="width: {Math.max((q.count / maxCount) * 100, 8)}%"></span>
+                    <span class="faq-text">{q.text}</span>
+                    <span class="faq-count">{q.count}×</span>
+                  </button>
+                {/each}
+              </div>
+              <p class="faq-hint">
+                Fragen werden semantisch gruppiert — unterschiedlich formulierte, aber inhaltsgleiche Fragen zählen zum selben Eintrag.
+              </p>
+            {:else if activeDoc}
+              <p class="suggestions-label">Beispielfragen zu diesem Dokument:</p>
+              <div class="chips">
+                {#each activeDoc.suggestions as s}
+                  <button class="chip" onclick={() => ask(s)}>{s}</button>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/if}
 
@@ -423,6 +447,21 @@
 
       <!-- Input -->
       <div class="input-bar">
+        {#if clusterFeedback}
+          <div class="cluster-toast {clusterFeedback.isNew ? 'is-new' : 'is-existing'}">
+            {#if clusterFeedback.isNew}
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+              </svg>
+              <span><strong>Neue Frage erkannt</strong> — zur Wissensbasis hinzugefügt</span>
+            {:else}
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+              </svg>
+              <span><strong>Ähnliche Frage erkannt</strong> — dieser Cluster wurde jetzt {clusterFeedback.count}× gefragt</span>
+            {/if}
+          </div>
+        {/if}
         <div class="input-row">
           <input
             type="text"
@@ -627,13 +666,13 @@
   .pdf-iframe { flex: 1; width: 100%; border: none; background: #111; }
 
   /* Chat panel */
-  .chat-panel { display: flex; flex-direction: column; overflow: hidden; }
+  .chat-panel { display: flex; flex-direction: column; overflow: hidden; position: relative; }
   .chat-idle {
     flex: 1; display: flex; align-items: center; justify-content: center;
     font-size: 0.85rem; color: #475569; padding: 2rem; text-align: center;
   }
   .suggestions { padding: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
-  .suggestions-label { font-size: 0.76rem; color: #94a3b8; }
+  .suggestions-label { font-size: 0.76rem; color: #94a3b8; display: flex; align-items: center; gap: 0.4rem; }
   .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   .chip {
     font-size: 0.75rem; color: #94a3b8; background: #111;
@@ -641,11 +680,47 @@
     cursor: pointer; transition: all 0.15s; text-align: left;
   }
   .chip:hover { background: #1a1a1a; color: #f1f5f9; border-color: #22d3ee; }
-  .chip-count {
-    font-size: 0.62rem; font-weight: 700; color: #22d3ee;
-    background: rgba(34,211,238,0.15); padding: 0 4px; border-radius: 3px;
-    margin-left: 5px; vertical-align: middle;
+
+  /* FAQ list with frequency bars */
+  .faq-list { display: flex; flex-direction: column; gap: 0.35rem; }
+  .faq-item {
+    position: relative; display: flex; align-items: center; gap: 0.5rem;
+    width: 100%; text-align: left; overflow: hidden;
+    background: #111; border: 1px solid #252525; border-radius: 8px;
+    padding: 0.5rem 0.7rem; cursor: pointer; transition: border-color 0.15s;
   }
+  .faq-item:hover { border-color: #22d3ee; }
+  .faq-bar {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: rgba(34,211,238,0.1); border-right: 1px solid rgba(34,211,238,0.25);
+    transition: width 0.5s cubic-bezier(0.22,1,0.36,1); z-index: 0;
+  }
+  .faq-text { position: relative; z-index: 1; flex: 1; font-size: 0.8rem; color: #e2eaf2; line-height: 1.35; }
+  .faq-count {
+    position: relative; z-index: 1; flex-shrink: 0;
+    font-size: 0.7rem; font-weight: 700; color: #22d3ee;
+    background: rgba(34,211,238,0.15); padding: 1px 6px; border-radius: 4px;
+  }
+  .faq-hint { font-size: 0.7rem; color: #475569; line-height: 1.4; margin-top: 0.15rem; }
+
+  /* Cluster feedback toast */
+  .cluster-toast {
+    position: absolute; left: 0.75rem; right: 0.75rem; bottom: 100%; margin-bottom: 0.4rem;
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.55rem 0.75rem; border-radius: 9px;
+    font-size: 0.76rem; line-height: 1.4; z-index: 5;
+    animation: toast-in 0.3s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .cluster-toast svg { flex-shrink: 0; }
+  .cluster-toast strong { font-weight: 700; }
+  .cluster-toast.is-new {
+    background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: #4ade80;
+  }
+  .cluster-toast.is-existing {
+    background: rgba(34,211,238,0.12); border: 1px solid rgba(34,211,238,0.35); color: #22d3ee;
+  }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
   .chat { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .msg { display: flex; gap: 0.5rem; }
@@ -673,7 +748,7 @@
   .typing span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
 
-  .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #1e1e1e; background: rgba(12,12,12,0.95); flex-shrink: 0; }
+  .input-bar { padding: 0.65rem 0.75rem; border-top: 1px solid #1e1e1e; background: rgba(12,12,12,0.95); flex-shrink: 0; position: relative; }
   .input-row { display: flex; gap: 0.4rem; }
   .warn-box {
     display: flex; align-items: flex-start; gap: 0.5rem;

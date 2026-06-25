@@ -7,10 +7,15 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 VECTOR_SIZE = 768  # nomic-embed-text
 CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
+QUESTION_THRESHOLD = 0.88  # >= bedeutet "semantisch dieselbe Frage"
 
 
 def _collection(doc_id: str) -> str:
     return f"doc_{doc_id}"
+
+
+def _questions_collection(doc_id: str) -> str:
+    return f"questions_{doc_id}"
 
 
 def get_embedding(text: str, ollama_host: str) -> list[float]:
@@ -65,8 +70,43 @@ def index_pdf(pdf_path: str, doc_id: str, client: QdrantClient, ollama_host: str
     return len(points)
 
 
-def search(question: str, doc_id: str, client: QdrantClient, ollama_host: str, top_k: int = 5) -> list[dict]:
+def search(question: str, doc_id: str, client: QdrantClient, ollama_host: str, top_k: int = 5, vector: list[float] | None = None) -> list[dict]:
     collection = _collection(doc_id)
-    vector = get_embedding(question, ollama_host)
+    if vector is None:
+        vector = get_embedding(question, ollama_host)
     hits = client.search(collection_name=collection, query_vector=vector, limit=top_k)
     return [{"text": h.payload["text"], "page": h.payload["page"], "score": h.score} for h in hits]
+
+
+def track_question(question: str, doc_id: str, client: QdrantClient, vector: list[float]) -> tuple[int, bool]:
+    """Speichert die Frage semantisch geclustert. Gibt (count, is_new) zurück."""
+    collection = _questions_collection(doc_id)
+    if not client.collection_exists(collection):
+        client.create_collection(
+            collection,
+            vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+        )
+
+    hits = client.search(collection_name=collection, query_vector=vector, limit=1)
+    if hits and hits[0].score >= QUESTION_THRESHOLD:
+        point = hits[0]
+        new_count = point.payload["count"] + 1
+        client.set_payload(collection_name=collection, payload={"count": new_count}, points=[point.id])
+        return new_count, False
+
+    client.upsert(collection_name=collection, points=[PointStruct(
+        id=str(uuid.uuid4()),
+        vector=vector,
+        payload={"text": question, "count": 1},
+    )])
+    return 1, True
+
+
+def top_questions(doc_id: str, client: QdrantClient, limit: int = 8) -> list[dict]:
+    collection = _questions_collection(doc_id)
+    if not client.collection_exists(collection):
+        return []
+    points, _ = client.scroll(collection_name=collection, limit=500, with_payload=True)
+    items = [{"text": p.payload["text"], "count": p.payload["count"]} for p in points]
+    items.sort(key=lambda x: x["count"], reverse=True)
+    return items[:limit]
