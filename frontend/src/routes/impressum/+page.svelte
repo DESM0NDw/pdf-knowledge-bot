@@ -1,5 +1,5 @@
 <svelte:head>
-  <title>Impressum – PDF Wissens-Bot</title>
+  <title>Impressum – Wissens-Assistent</title>
 </svelte:head>
 
 <div class="wrapper">

@@ -208,8 +208,8 @@
           </svg>
         </div>
         <div>
-          <h1>PDF Wissens-Bot</h1>
-          <p class="subtitle">Fragen zu beliebigen Dokumenten, beantwortet mit Seitenangabe</p>
+          <h1>Wissens-Assistent</h1>
+          <p class="subtitle">Antworten mit Quellenangabe — und erkennt, welche Fragen am häufigsten gestellt werden</p>
         </div>
       </div>
       <div class="header-right">
@@ -240,7 +240,7 @@
         {/if}
       {/each}
     </div>
-    <p class="flow-hint">In einer echten Integration werden Dokumente beim Upload automatisch indiziert — Mitarbeiter können sofort Fragen stellen.</p>
+    <p class="flow-hint">In einer echten Integration werden Dokumente beim Upload automatisch indiziert — Mitarbeiter können sofort Fragen stellen, und das System erkennt mit der Zeit, welche Fragen am häufigsten kommen.</p>
   </div>
 
   <!-- Doc selector -->
