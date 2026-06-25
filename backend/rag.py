@@ -7,7 +7,9 @@ from qdrant_client.models import Distance, VectorParams, PointStruct
 VECTOR_SIZE = 768  # nomic-embed-text
 CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
-QUESTION_THRESHOLD = 0.88  # >= bedeutet "semantisch dieselbe Frage"
+# Kalibriert an nomic-embed-text: gleiche Frage umformuliert ~0.70-0.77,
+# verschiedene Themen ~0.55. 0.65 trennt beide sauber.
+QUESTION_THRESHOLD = 0.65
 
 
 def _collection(doc_id: str) -> str:
