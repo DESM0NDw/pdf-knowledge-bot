@@ -1,6 +1,7 @@
 services:
   qdrant:
     image: qdrant/qdrant:latest
+    restart: always
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -9,6 +10,7 @@ services:
   backend:
     build: ./backend
     container_name: pdf-bot-backend
+    restart: always
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - QDRANT_HOST=qdrant
@@ -23,6 +25,9 @@ services:
 
   frontend:
     build: ./frontend
+    restart: always
+    ports:
+      - 127.0.0.1:8091:80
     depends_on:
       - backend
     networks:

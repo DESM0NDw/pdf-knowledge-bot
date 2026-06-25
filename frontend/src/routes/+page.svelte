@@ -5,9 +5,12 @@
   type Doc = {
     id: string;
     name: string;
-    industry: string;
+    use_case: string;
     description: string;
     pdf_url: string;
+    flow_steps: string[];
+    flow_hint: string;
+    processing_text: string;
     suggestions: string[];
   };
 
@@ -15,17 +18,22 @@
   type Message = { role: 'user' | 'bot'; text: string; sources?: number[] };
   type Phase = 'idle' | 'indexing' | 'ready' | 'answering';
 
-  const STEPS = [
-    { path: 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z', label: 'Dokument laden' },
-    { path: 'M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z', label: 'Embedding' },
-    { path: 'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z', label: 'Frage stellen' },
-    { path: 'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z', label: 'Antwort' },
+  // Die vier Phasen sind technisch immer gleich (Laden → Indexieren → Fragen → Antworten),
+  // nur die Beschriftung wechselt je Use Case (kommt aus dem aktiven Dokument).
+  const STEP_ICONS = [
+    'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z',
+    'M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z',
+    'M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z',
+    'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z',
   ];
+  const DEFAULT_STEPS = ['Dokument laden', 'Wissensbasis aufbauen', 'Frage stellen', 'Antwort + Analyse'];
+  const DEFAULT_HINT = 'Wähle oben einen Use Case — der Ablauf passt sich an. Das System beantwortet Fragen aus dem Dokument und erkennt mit der Zeit, welche am häufigsten kommen.';
 
-  const INDUSTRY_COLOR: Record<string, string> = {
-    Technologie: 'badge-amber',
-    Gastronomie: 'badge-red',
-    Immobilien: 'badge-blue',
+  const USE_CASE_COLOR: Record<string, string> = {
+    'Mitarbeiter-Self-Service': 'badge-amber',
+    'Kundensupport': 'badge-blue',
+    'Onboarding': 'badge-green',
+    'Sales-Enablement': 'badge-red',
   };
 
   let docs = $state<Doc[]>([]);
@@ -47,6 +55,9 @@
   let trackedQuestions = $state<TrackedQuestion[]>([]);
   let clusterFeedback = $state<{ isNew: boolean; count: number } | null>(null);
   let feedbackTimer: ReturnType<typeof setTimeout>;
+
+  let stepLabels = $derived(activeDoc?.flow_steps ?? DEFAULT_STEPS);
+  let flowHint = $derived(activeDoc?.flow_hint ?? DEFAULT_HINT);
 
   onMount(async () => {
     const res = await fetch('/api/docs');
@@ -228,24 +239,24 @@
   <div class="flow-bar">
     <p class="flow-label">So läuft die Automation:</p>
     <div class="flow-steps">
-      {#each STEPS as step, i}
+      {#each STEP_ICONS as path, i}
         <div class="flow-step {activeStep === i ? 'active' : ''} {activeStep > i ? 'done' : ''}">
           <svg class="step-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d={step.path} />
+            <path stroke-linecap="round" stroke-linejoin="round" d={path} />
           </svg>
-          <span class="step-label">{step.label}</span>
+          <span class="step-label">{stepLabels[i]}</span>
         </div>
-        {#if i < STEPS.length - 1}
+        {#if i < STEP_ICONS.length - 1}
           <div class="flow-arrow {activeStep > i ? 'done' : ''}">→</div>
         {/if}
       {/each}
     </div>
-    <p class="flow-hint">In einer echten Integration werden Dokumente beim Upload automatisch indiziert — Mitarbeiter können sofort Fragen stellen, und das System erkennt mit der Zeit, welche Fragen am häufigsten kommen.</p>
+    <p class="flow-hint">{flowHint}</p>
   </div>
 
   <!-- Doc selector -->
   <div class="doc-bar">
-    <span class="doc-bar-label">Demo-Dokumente:</span>
+    <span class="doc-bar-label">Use Case wählen:</span>
     <div class="doc-cards">
       {#each docs as doc}
         <div
@@ -266,7 +277,7 @@
             <span class="doc-name">{doc.name}</span>
             <span class="doc-desc">{doc.description}</span>
           </div>
-          <span class="industry-badge {INDUSTRY_COLOR[doc.industry] ?? 'badge-amber'}">{doc.industry}</span>
+          <span class="industry-badge {USE_CASE_COLOR[doc.use_case] ?? 'badge-amber'}">{doc.use_case}</span>
         </div>
       {/each}
     </div>
@@ -321,7 +332,7 @@
         <div class="indexing-state">
           <div class="spinner"></div>
           <p class="indexing-title">Wird eingelesen...</p>
-          <p class="indexing-sub">Seiten werden in Vektoren umgewandelt</p>
+          <p class="indexing-sub">{activeDoc?.processing_text ?? 'Seiten werden in Vektoren umgewandelt'}</p>
         </div>
 
       {:else if dragOver}
@@ -585,6 +596,7 @@
   .badge-amber { color: #22d3ee; background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2); }
   .badge-red { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2); }
   .badge-blue { color: #60a5fa; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2); }
+  .badge-green { color: #4ade80; background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.2); }
 
   /* Mobile tabs */
   .mobile-tabs { display: none; border-bottom: 1px solid #1e1e1e; }
