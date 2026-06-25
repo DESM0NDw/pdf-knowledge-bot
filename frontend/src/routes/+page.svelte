@@ -462,10 +462,14 @@
                     <button class="faq-item" onclick={() => ask(q.text)}>
                       <span class="faq-bar" style="width: {Math.max((q.count / maxCount) * 100, 8)}%"></span>
                       <span class="faq-text">{q.text}</span>
+                      {#if q.count >= 2}
+                        <span class="faq-tag" title="Konzept-Andeutung: In einer echten Integration würde diese häufige Frage als FAQ-Antwort hinterlegt und sofort ausgeliefert.">⚡ FAQ</span>
+                      {/if}
                       <span class="faq-count">{q.count}×</span>
                     </button>
                   {/each}
                 </div>
+                <p class="faq-note">⚡ Konzept: Häufige Fragen würden in einer echten Integration als feste FAQ-Antwort hinterlegt und sofort ausgeliefert — ohne sie jedes Mal neu von der KI generieren zu lassen.</p>
               {/if}
               {#if activeDoc}
                 <p class="suggest-label">Beispielfragen{trackedQuestions.length > 0 ? ' — zum Testen & Erweitern' : ''}</p>
@@ -732,6 +736,13 @@
     font-size: 0.7rem; font-weight: 700; color: #22d3ee;
     background: rgba(34,211,238,0.15); padding: 1px 6px; border-radius: 4px;
   }
+  .faq-tag {
+    position: relative; z-index: 1; flex-shrink: 0; cursor: help;
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em;
+    color: #fbbf24; background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.3); padding: 1px 5px; border-radius: 4px;
+  }
+  .faq-note { font-size: 0.68rem; color: #64748b; line-height: 1.45; margin-top: 0.1rem; }
 
   /* Cluster feedback — inline note at the end of the chat flow */
   .cluster-toast {
