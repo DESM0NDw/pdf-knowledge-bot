@@ -1,11 +1,13 @@
 import os
 import time
+import math
 import tempfile
 import hashlib
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 import sentry_sdk
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
@@ -75,9 +77,46 @@ DOCS = [
     },
 ]
 
+@dataclass
+class TrackedQuestion:
+    text: str
+    count: int = 1
+    embedding: list[float] = field(default_factory=list)
+
+
+def _cosine_sim(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = math.sqrt(sum(x * x for x in a))
+    norm_b = math.sqrt(sum(y * y for y in b))
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _track_question(question: str, doc_id: str) -> None:
+    q = question.strip()
+    if len(q) < 10:
+        return
+    try:
+        emb = rag.get_embedding(q, OLLAMA_HOST)
+    except Exception:
+        return
+    tracked = _question_tracker[doc_id]
+    best_sim, best_idx = 0.0, -1
+    for i, tq in enumerate(tracked):
+        sim = _cosine_sim(tq.embedding, emb)
+        if sim > best_sim:
+            best_sim, best_idx = sim, i
+    if best_sim >= 0.88 and best_idx >= 0:
+        tracked[best_idx].count += 1
+    else:
+        tracked.append(TrackedQuestion(text=q, count=1, embedding=emb))
+
+
 qdrant: QdrantClient | None = None
 groq_client: Groq | None = None
 _indexed: set[str] = set()
+_question_tracker: dict[str, list[TrackedQuestion]] = defaultdict(list)
 
 
 @asynccontextmanager
@@ -196,8 +235,17 @@ class ChatResponse(BaseModel):
     sources: list[int]
 
 
+@app.get("/api/questions/{doc_id}")
+def get_questions(doc_id: str):
+    tracked = _question_tracker.get(doc_id, [])
+    return [
+        {"text": q.text, "count": q.count}
+        for q in sorted(tracked, key=lambda q: q.count, reverse=True)[:8]
+    ]
+
+
 @app.post("/api/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, background_tasks: BackgroundTasks):
     if not req.question.strip():
         raise HTTPException(400, "Frage darf nicht leer sein.")
 
@@ -227,4 +275,5 @@ def chat(req: ChatRequest):
 
     answer = completion.choices[0].message.content
     sources = sorted(set(c["page"] for c in chunks))
+    background_tasks.add_task(_track_question, req.question, req.doc_id)
     return ChatResponse(answer=answer, sources=sources)

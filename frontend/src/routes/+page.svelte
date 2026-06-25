@@ -11,6 +11,7 @@
     suggestions: string[];
   };
 
+  type TrackedQuestion = { text: string; count: number };
   type Message = { role: 'user' | 'bot'; text: string; sources?: number[] };
   type Phase = 'idle' | 'indexing' | 'ready' | 'answering';
 
@@ -43,17 +44,24 @@
   let uploadError = $state('');
   let draggingId = $state<string | null>(null);
   let mobileTab = $state<'pdf' | 'chat'>('chat');
+  let trackedQuestions = $state<TrackedQuestion[]>([]);
 
   onMount(async () => {
     const res = await fetch('/api/docs');
     docs = await res.json();
   });
 
+  async function fetchTracked(docId: string) {
+    const res = await fetch(`/api/questions/${docId}`);
+    if (res.ok) trackedQuestions = await res.json();
+  }
+
   async function selectDoc(doc: Doc) {
     if (phase === 'indexing') return;
     if (activeDocId === doc.id && phase !== 'idle') return;
 
     messages = [];
+    trackedQuestions = [];
     pdfPage = 1;
     pdfSrc = '';
     phase = 'indexing';
@@ -70,6 +78,7 @@
     pdfSrc = doc.pdf_url;
     activeStep = 2;
     phase = 'ready';
+    fetchTracked(doc.id);
   }
 
   async function uploadAndIndex(file: File) {
@@ -82,6 +91,7 @@
     }
 
     messages = [];
+    trackedQuestions = [];
     pdfPage = 1;
     pdfSrc = '';
     phase = 'indexing';
@@ -132,6 +142,7 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       messages = [...messages, { role: 'bot', text: data.answer, sources: data.sources }];
+      fetchTracked(activeDocId);
     } catch {
       messages = [...messages, { role: 'bot', text: 'Fehler beim Abrufen der Antwort.' }];
     } finally {
@@ -345,12 +356,20 @@
         </div>
       {:else}
         <!-- Suggestions -->
-        {#if messages.length === 0 && activeDoc}
+        {#if messages.length === 0 && (activeDoc || trackedQuestions.length > 0)}
+          {@const chips = trackedQuestions.length > 0
+            ? trackedQuestions
+            : (activeDoc?.suggestions ?? []).map(s => ({ text: s, count: 0 }))}
           <div class="suggestions">
-            <p class="suggestions-label">Häufige Fragen zu diesem Dokument:</p>
+            <p class="suggestions-label">
+              {trackedQuestions.length > 0 ? 'Häufig gestellt:' : 'Häufige Fragen zu diesem Dokument:'}
+            </p>
             <div class="chips">
-              {#each activeDoc.suggestions as s}
-                <button class="chip" onclick={() => ask(s)}>{s}</button>
+              {#each chips as q}
+                <button class="chip" onclick={() => ask(q.text)}>
+                  {q.text}
+                  {#if q.count > 1}<span class="chip-count">×{q.count}</span>{/if}
+                </button>
               {/each}
             </div>
           </div>
@@ -622,6 +641,11 @@
     cursor: pointer; transition: all 0.15s; text-align: left;
   }
   .chip:hover { background: #1a1a1a; color: #f1f5f9; border-color: #22d3ee; }
+  .chip-count {
+    font-size: 0.62rem; font-weight: 700; color: #22d3ee;
+    background: rgba(34,211,238,0.15); padding: 0 4px; border-radius: 3px;
+    margin-left: 5px; vertical-align: middle;
+  }
 
   .chat { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .msg { display: flex; gap: 0.5rem; }
