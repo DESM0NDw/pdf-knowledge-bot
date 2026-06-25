@@ -420,6 +420,22 @@
               </div>
             </div>
           {/if}
+
+          {#if clusterFeedback}
+            <div class="cluster-toast {clusterFeedback.isNew ? 'is-new' : 'is-existing'}">
+              {#if clusterFeedback.isNew}
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+                <span><strong>Neue Frage erkannt</strong> — zur Wissensbasis hinzugefügt</span>
+              {:else}
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
+                </svg>
+                <span><strong>Ähnliche Frage erkannt</strong> — dieser Cluster wurde jetzt {clusterFeedback.count}× gefragt</span>
+              {/if}
+            </div>
+          {/if}
         </div>
       {/if}
 
@@ -442,7 +458,7 @@
                 {@const maxCount = Math.max(...trackedQuestions.map(q => q.count))}
                 <p class="suggest-label">Was andere am häufigsten fragen</p>
                 <div class="faq-list">
-                  {#each trackedQuestions as q (q.text)}
+                  {#each trackedQuestions.slice(0, 3) as q (q.text)}
                     <button class="faq-item" onclick={() => ask(q.text)}>
                       <span class="faq-bar" style="width: {Math.max((q.count / maxCount) * 100, 8)}%"></span>
                       <span class="faq-text">{q.text}</span>
@@ -466,21 +482,6 @@
 
       <!-- Input -->
       <div class="input-bar">
-        {#if clusterFeedback}
-          <div class="cluster-toast {clusterFeedback.isNew ? 'is-new' : 'is-existing'}">
-            {#if clusterFeedback.isNew}
-              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-              </svg>
-              <span><strong>Neue Frage erkannt</strong> — zur Wissensbasis hinzugefügt</span>
-            {:else}
-              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5" />
-              </svg>
-              <span><strong>Ähnliche Frage erkannt</strong> — dieser Cluster wurde jetzt {clusterFeedback.count}× gefragt</span>
-            {/if}
-          </div>
-        {/if}
         <div class="input-row">
           <input
             type="text"
@@ -521,7 +522,7 @@
 </div>
 
 <style>
-  .wrapper { min-height: 100vh; display: flex; flex-direction: column; background: #0c0c0c; }
+  .wrapper { height: 100vh; display: flex; flex-direction: column; background: #0c0c0c; overflow: hidden; }
 
   /* Header */
   header {
@@ -686,7 +687,7 @@
   .pdf-iframe { flex: 1; width: 100%; border: none; background: #111; }
 
   /* Chat panel */
-  .chat-panel { display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .chat-panel { display: flex; flex-direction: column; overflow: hidden; position: relative; min-height: 0; }
   .chat-idle {
     flex: 1; display: flex; align-items: center; justify-content: center;
     font-size: 0.85rem; color: #475569; padding: 2rem; text-align: center;
@@ -732,14 +733,12 @@
     background: rgba(34,211,238,0.15); padding: 1px 6px; border-radius: 4px;
   }
 
-  /* Cluster feedback toast */
+  /* Cluster feedback — inline note at the end of the chat flow */
   .cluster-toast {
-    position: absolute; left: 0.75rem; right: 0.75rem; bottom: 100%; margin-bottom: 0.4rem;
-    display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.55rem 0.75rem; border-radius: 9px;
-    font-size: 0.76rem; line-height: 1.4; z-index: 5;
+    align-self: center; display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0.75rem; border-radius: 999px;
+    font-size: 0.74rem; line-height: 1.4;
     animation: toast-in 0.3s cubic-bezier(0.22,1,0.36,1);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
   .cluster-toast svg { flex-shrink: 0; }
   .cluster-toast strong { font-weight: 700; }
@@ -751,7 +750,7 @@
   }
   @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-  .chat { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
+  .chat { flex: 1; min-height: 0; overflow-y: auto; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .msg { display: flex; gap: 0.5rem; }
   .msg.user { justify-content: flex-end; }
   .msg.bot { align-items: flex-start; }
